@@ -60,9 +60,11 @@ inline double draw_time(const Params& p, double u) {
 }
 
 // Fills `pv` (resized to p.paths) with discounted cash flows and returns summary stats.
-// Caller owns the buffer so repeated pricing does no per-path allocation.
-inline Result simulate(const Params& p, std::vector<double>& pv) {
+// Optional `tt` receives each path's resolution time. Caller owns the buffers so repeated
+// pricing does no per-path allocation.
+inline Result simulate(const Params& p, std::vector<double>& pv, std::vector<double>* tt = nullptr) {
     pv.resize(p.paths);
+    if (tt) tt->resize(p.paths);
     const double payoff = p.face * p.recovery;
     int nth = 1;
     #ifdef _OPENMP
@@ -88,6 +90,7 @@ inline Result simulate(const Params& p, std::vector<double>& pv) {
             const double carry = p.carry * (p.rate > 0 ? (1.0 - disc) / p.rate : T); // PV of continuous cost over [0,T]
             const double v = ((rng.uniform() <= p.p_win) ? payoff * disc : 0.0) - carry;
             pv[i] = v; sum += v; sumsq += v * v; sumdisc += disc; sumcarry += carry;
+            if (tt) (*tt)[i] = T;
         }
         part[4 * tid] = sum; part[4 * tid + 1] = sumsq; part[4 * tid + 2] = sumdisc; part[4 * tid + 3] = sumcarry;
     }
@@ -102,9 +105,11 @@ inline Result simulate(const Params& p, std::vector<double>& pv) {
     r.stddev = std::sqrt(std::max(0.0, sumsq / n - r.mean * r.mean));
     r.mean_discount = sumdisc / n;
     r.mean_carry = sumcarry / n;
+    // Percentiles on a scratch copy so `pv` stays in path order for the caller (convergence plots, CSV).
+    std::vector<double> scratch(pv);
     auto pct = [&](double q) {
-        auto k = pv.begin() + static_cast<std::ptrdiff_t>(q * (n - 1));
-        std::nth_element(pv.begin(), k, pv.end());
+        auto k = scratch.begin() + static_cast<std::ptrdiff_t>(q * (n - 1));
+        std::nth_element(scratch.begin(), k, scratch.end());
         return *k;
     };
     r.p5 = pct(0.05); r.p50 = pct(0.50); r.p95 = pct(0.95);

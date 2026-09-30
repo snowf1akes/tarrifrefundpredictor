@@ -38,5 +38,11 @@ int main() {
     assert(r2.mean == r.mean && r2.p95 == r.p95);
     assert(certainty_equiv(r, 0) > certainty_equiv(r, 1));
 
+    // 7. pv stays in path order (percentiles must not partially sort the caller's buffer):
+    //    wins are spread evenly, so about half of them land in the first half of the buffer
+    std::size_t wins = 0, wins_first_half = 0;
+    for (std::size_t i = 0; i < pv.size(); ++i) if (pv[i] > 0) { ++wins; wins_first_half += i < pv.size() / 2; }
+    assert(std::fabs((double)wins_first_half / wins - 0.5) < 0.02);
+
     std::puts("all checks passed");
 }

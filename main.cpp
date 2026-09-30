@@ -47,9 +47,9 @@ int main(int argc, char** argv) {
     }
     if (p.paths == 0 || p.p_win < 0 || p.p_win > 1 || p.scale <= 0 || p.shape <= 0 || p.carry < 0) { usage(); return 1; }
 
-    std::vector<double> pv;
+    std::vector<double> pv, tt;
     auto t0 = std::chrono::steady_clock::now();
-    Result r = simulate(p, pv);
+    Result r = simulate(p, pv, csv ? &tt : nullptr);
     double us = std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - t0).count();
 
     std::printf("paths=%zu  dist=%s  scale=%.2f shape=%.2f  rate=%.3f  p_win=%.3f  carry=%.0f/yr\n",
@@ -74,8 +74,8 @@ int main(int argc, char** argv) {
 
     if (csv) {
         std::ofstream f(csv);
-        f << "pv\n";
-        for (double v : pv) f << v << '\n';
+        f << "pv,t\n";
+        for (std::size_t i = 0; i < pv.size(); ++i) f << pv[i] << ',' << tt[i] << '\n';
         std::printf("wrote %s\n", csv);
     }
 }

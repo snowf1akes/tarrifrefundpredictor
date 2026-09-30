@@ -35,7 +35,7 @@ Or `make` / `make test` on Linux, macOS, MSYS2. On Windows without a compiler: `
 ```bash
 ./tariff-pricer --paths 1000000 --p 0.6 --rate 0.05 --dist weibull --scale 2.5 --shape 1.5 \
                 --carry 25000 --market 0.45 --offer 0.40 --risk 0.5 --csv samples.csv
-python plot.py samples.csv        # matplotlib histogram -> pv_hist.png
+python plot.py [paths]            # drives the binary, writes every figure below to figs/
 ```
 
 Example output:
@@ -60,6 +60,44 @@ offer 0.4000 vs CE 0.2717 (risk=0.50) -> SELL
 ```
 
 All flags: `./tariff-pricer --help`.
+
+## Figures
+
+Defaults: face 1M, P(win) 0.6, rate 5%, Exponential mean 2y, carry 25K/yr, cash offer 0.40 of face.
+`python plot.py` regenerates all of these from the compiled engine in a few seconds.
+
+**PV distribution.** Bimodal: lost claims land below zero (carry cost with no payout),
+won claims cluster near face discounted by resolution time. 40% of paths lose money.
+
+![pv](figs/pv_distribution.png)
+
+**Monte Carlo convergence.** Running mean of PV with a 95% confidence band. Standard error
+shrinks as 1/sqrt(N); at 200K paths the price is pinned to about 0.2% of face.
+
+![convergence](figs/convergence.png)
+
+**Time-to-resolution models.** Exponential (memoryless), Weibull k>1 (hazard rises with age:
+cases that drag on tend to get resolved), Weibull k<1 (fat tail: some cases never end).
+
+![t](figs/resolution_time.png)
+
+**Sell-vs-hold decision boundary.** Certainty equivalent `mean - risk * stddev` as a fraction
+of face over P(win) and risk penalty. The orange contour is where a 0.40 cash offer is exactly
+fair: hold to the lower-right, sell to the upper-left.
+
+![boundary](figs/decision_boundary.png)
+
+**Implied probability.** Invert the pricing identity to read P(win) off an observed market
+price. Higher discount rates and carry costs mean the market must be assigning a higher win
+probability for the same price.
+
+![implied](figs/implied_probability.png)
+
+**Sensitivity to resolution time.** E[PV] vs expected years to resolution for each tail shape,
+with Weibull scale set so the mean matches. Carry plus discounting make delay expensive; the
+crossing with the offer line is the maximum expected delay at which holding still beats selling.
+
+![sens](figs/sensitivity.png)
 
 ## Test
 
