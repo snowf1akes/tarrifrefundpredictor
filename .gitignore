@@ -1,0 +1,6 @@
+*.exe
+tariff-pricer
+run-test
+*.csv
+*.png
+*.o
